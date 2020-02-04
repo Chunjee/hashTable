@@ -1,23 +1,23 @@
-﻿class hashTable{
+class hashtable {
 	; User methods
-	hasKey(byref k){
+	hasKey(byref k) {
 		return this[6].call(k, "Cdecl ptr") ? true : false
 	}
-	hasVal(byref v){
+	hasVal(byref v) {
 		return this[9].call(v, "cdecl ptr") ? true : false
 	}
-	valGetKey(byref v){
+	valGetKey(byref v) {
 		return this[9].call(v, "cdecl str")
 	}
-	delete(byref k){
+	delete(byref k) {
 		return this[4].call(k, "Cdecl")
 	}
-	clone(){
+	clone() {
 		; Use: clonedHt := ht.clone()
 		local clone := this[14].call()
-		return new hashTable(this.length(),, clone)
+		return new hashtable(this.length(),, clone)
 	}
-	forEach(udfn,uParams:=0){
+	forEach(udfn,uParams:=0) {
 		; accepts function name, func / bound func obj.
 		; binary code address, eg registercallback("f", "cdecl fast") <- cdecl needed on 32bit ahk. Fast option recommended if ok.
 		local cbid,r,cbfn
@@ -26,25 +26,25 @@
 		this.calloutFunctions.Delete(cbid)
 		return r
 	}
-	forEachVal(byref val,udfn,uParams:=0){
+	forEachVal(byref val,udfn,uParams:=0) {
 		local cbid,r,cbfn
 		this.setUpcalloutFunctions(udfn, cbfn, cbid)
 		r:=this[13].call(val, "ptr", cbfn, "uint", cbid, "Ptr", uParams, "cdecl")
 		this.calloutFunctions.Delete(cbid)
 		return r
 	}
-	count(){
+	count() {
 		local table := NumGet(this.table+0,0,"Ptr")
 		return numget(table+0,	A_PtrSize*2+12,"uint")
 	}
-	length(){
+	length() {
 		local table := NumGet(this.table+0,0,"Ptr")
 		return numget(table+0,	A_PtrSize*2+08,"uint")
 	}
-	getMaxload(){
+	getMaxload() {
 		return this.maxLoad
 	}
-	setMaxload(newMax){
+	setMaxload(newMax) {
 		local prevLoad
 		local table := NumGet(this.table+0,0,"Ptr")
 		prevLoad := this.getMaxload()
@@ -52,19 +52,19 @@
 		this.maxLoad:=newMax
 		return prevLoad
 	}
-	splitAdd(keys,vals, del:="`n",constVal:=false,isByref:=false){
+	splitAdd(keys,vals, del:="`n",constVal:=false,isByref:=false) {
 		if (del == "")
 			return this.splitAddNoDel(keys,vals,constVal,isByref)
 		if isByref ; For very large input, pass keys and vals by address and specify true. Improves performance.
 			return this[constVal ? 11 : 10].call("ptr", keys, "ptr", vals, "wstr",del, "cdecl")
 		return this[constVal ? 11 : 10].call("wstr", keys, "wstr", vals, "wstr",del, "cdecl")
 	}
-	splitAddNoDel(byref keys, byref vals, constVal, isByref){	; Call splitAdd, specifing del:="", instead of calling this directly
+	splitAddNoDel(byref keys, byref vals, constVal, isByref) {	; Call splitAdd, specifing del:="", instead of calling this directly
 		if isByref ; For very large input, pass keys and vals by address and specify true. Improves performance.
 			return this[12].call("ptr", keys, "ptr", vals, "int", (constVal?1:0), "cdecl")
 		return this[12].call("wstr", keys, "wstr", vals, "int", (constVal?1:0), "cdecl")
 	}
-	addFromFile(path){
+	addFromFile(path) {
 		; See toFile for file layout.
 		local keyBytes, valBytes, error, success
 		local keyBuf, valBuf, nKeys
@@ -93,8 +93,8 @@
 			return 0
 		return keyBytes+valBytes								; return number of bytes in the added data. (only includes key/val bytes)
 	}
-	copyFrom(ht){
-		; Adds all key value pairs in hashTable ht, to "this"
+	copyFrom(ht) {
+		; Adds all key value pairs in hashtable ht, to "this"
 		/*
 		typedef struct copyParams {
 			tableData** destTable;
@@ -106,13 +106,13 @@
 		local uParams
 		varSetCapacity(uParams, 3*A_PtrSize)
 		numPut(this.table, uParams, 0, "Ptr")				; hash.h
-		numPut(hashTable.fnLib, uParams, A_PtrSize, "Ptr")	; hash.h
-		numPut(hashTable[5], uParams, A_PtrSize*2, "Ptr")	; hashPut.c
+		numPut(hashtable.fnLib, uParams, A_PtrSize, "Ptr")	; hash.h
+		numPut(hashtable[5], uParams, A_PtrSize*2, "Ptr")	; hashPut.c
 		this.checkIfNeedRehash(ht.count())
-		ht.forEach(this[16], &uParams)						; this[16] is copyFromHashTable.c, see initBin() and initBoundFuncs() (in the last it is just a comment)
+		ht.forEach(this[16], &uParams)						; this[16] is copyFromhashtable.c, see initBin() and initBoundFuncs() (in the last it is just a comment)
 		return
 	}
-	toFile(path){
+	toFile(path) {
 		; File layout:
 		;	bytes 0 - 3, uint: keyBytes, number of bytes for keys
 		;	bytes 4 - 7, uint: count, number of keys (and values)
@@ -122,8 +122,9 @@
 		;
 		local raw, success
 		local fo := fileOpen(path,"w")
-		if !fo
+		if (!fo) {
 			throw exception("failed to create file: " path)
+		}
 		raw := this._toString("","",1,true)						; get keys
 		fo.writeuint(raw.bytes)									; write length of keys
 		fo.writeuint(this.count())								; write count
@@ -134,19 +135,22 @@
 		success *= raw.bytes == fo.rawWrite(raw.buf, raw.bytes)	; write vals
 		this.free(raw.buf)
 		fo.close()
-		if !success
+		if (!success) {
 			throw exception("Failed to save table to file. ( " path " )")
+		}
 		return raw.bytes
 	}
-	rehash(newLength:=0){
+	rehash(newLength:=0) {
 		; "Manual" rehash. Typical usage, when removed many values, shrink the table.
 		local newTable
 		local prevLength:=this.length()
 		local table := NumGet(this.table+0,0,"Ptr")
-		if (newLength==0)
+		if (newLength==0) {
 			newLength:= (this.count() / this.maxLoad) * 2 	; If new length is 0, choose the new length to be half way from reaching the maxLoad.
-		if (newLength == prevLength)						; No need to rehash if already at desired length
+		}
+		if (newLength == prevLength) {						; No need to rehash if already at desired length
 			return prevLength
+		}
 		this.initSize(newLength)
 		numput(this.nextSize-1, table+0, A_PtrSize*2+16,"uint")
 		newTable:=this[3].call()	; rehash.
@@ -160,52 +164,52 @@
 		return this.size
 	}
 	; Persistent related
-	deletePersistentFile(){
+	deletePersistentFile() {
 		; Deletes the file in this.path
 		; Note: you should also call makeNotPersistent() if you do not want the table to be saved when exiting the script
 		; Returns true on successful deletion.
 		return fileExist(this.path) ? (!this.fileDelete(this.path)) : false
 	}
-	fileDelete(path){ ; help function for deletePersistentFile().
+	fileDelete(path) { ; help function for deletePersistentFile().
 		fileDelete, % path
 		return errorlevel
 	}
-	makePersistent(path:=0){
+	makePersistent(path:=0) {
 		; Specify a path / file name where the table will be saved upon release.
 		this.path := this.path && !path ? this.path : path 		; Update path if specified
 		this._isPersistent:=true
 	}
-	makeNotPersistent(){
+	makeNotPersistent() {
 		; Unflag the table as persistent.
 		return this._isPersistent:=false 						; keep path
 	}
-	getPath(){
+	getPath() {
 		; Returns the path of a persistent table
 		return this.path
 	}
 	_isPersistent:=false
-	isPersistent(){
+	isPersistent() {
 		; returns true if persistent, else false
 		return this._isPersistent
 	}
 	_loadedFromFile:=false
-	loadedFromFile(){
+	loadedFromFile() {
 		; returns true if the table was loaded from file, else false.
 		return this._loadedFromFile
 	}
 	; Methods for viewing the table.
-	toString(del1:="`t=`t",del2:="`n"){
+	toString(del1:="`t=`t",del2:="`n") {
 		return this._toString(del1,del2,0)
 	}
-	keysToString(del:="`n"){
+	keysToString(del:="`n") {
 		return this._toString(del,0,1)
 	}
-	valsToString(del:="`n"){
+	valsToString(del:="`n") {
 		return this._toString(0,del,2)
 	}
 	; toTree not available in v1 version.
 	/*
-	toTree(opt:=""){
+	toTree(opt:="") {
 		local gui,tv,parents,cbfn
 		if (opt == "")
 			opt:="R20 w400"
@@ -224,7 +228,7 @@
 	}
 	*/
 	; Print tableData struct.
-	printTableData(show:=true, extra:=""){
+	printTableData(show:=true, extra:="") {
 		local table := NumGet(this.table+0,0,"Ptr")
 		local outstr
 		outstr:=		"Buckets: "		. numget(table+0,	A_PtrSize*0+00,"ptr	")		.	"`n" 	; Buckets		(the address)
@@ -234,57 +238,60 @@
 					.	"numKeys: "		. numget(table+0,	A_PtrSize*2+12,"uint")  	.	"`n" 	; numKeys
 					.	"nextLenInd: "	. numget(table+0,	A_PtrSize*2+16,"uint")          	  	; nextLenInd
 					.	"`n`n" . extra
-		if show
+		if (show) {
 			msgbox, 0x40, % "Hash table data", % outstr
-			
+		}
 		return outstr
 	}
 	;
 	; End user methods
 	; 
 	; Nested class
-	; when making a new hashTable, a reference to a "router" is returned. the "router" contains the reference to the new hashTable object. See __new()
-	class router { ; For familiar array syntax, i.e., [value := ] myHashTable[key] [ := value]
-		__new(ht){
-			ObjRawSet(this,hashTable,ht)
+	; when making a new hashtable, a reference to a "router" is returned. the "router" contains the reference to the new hashtable object. See __new()
+	class router { ; For familiar array syntax, i.e., [value := ] myhashtable[key] [ := value]
+		__new(ht) {
+			ObjRawSet(this,hashtable,ht)
 		}
-		__set(byref k, byref v){
-			this[hashTable,5].call(k, "wstr", v, "Cdecl")
+		__set(byref k, byref v) {
+			this[hashtable,5].call(k, "wstr", v, "Cdecl")
 			return v
 		}
-		__get(byref k){
-			return this[hashTable,6].call(k, "Cdecl str")
+		__get(byref k) {
+			return this[hashtable,6].call(k, "Cdecl str")
 		}
-		__call(f, p*){
-			return this[hashTable][f](p*)
+		__call(f, p*) {
+			return this[hashtable][f](p*)
 		}
-		__delete(){
-			static ht:=hashTable	; Because needs to call destroy() for persistent tables even if hashTable has been deleted.
+		__delete() {
+			static ht:=hashtable	; Because needs to call destroy() for persistent tables even if hashtable has been deleted.
 			this[ht].destroy()
 		}
 	}
 	; Init methods. Most init methods are called by __new. NOTE: There is "static" init in maketableSizesArray()
 	static init:= false
 	maxLoad:=0.7
-	__new(size:=23, path:=0, clone:=0){
+	__new(size:=23, path:=0, clone:=0) {
 		; The clone parameter is intended only for internal use. When cloning a hash table.
-		if !hashTable.init
-			hashTable.initBin(),hashTable.makeFnLib()
+		if (!hashtable.init) {
+			hashtable.initBin(),hashtable.makeFnLib()
+		}
 		this.icbfn:=registercallback(this.traversecalloutRouter,"cdecl Fast",6,&this)	
 		this.initSize(size)
 		this.initTable(clone)
 		this.initBoundFuncs()
 		this.loadFromFileIfPersistent(path)
-		return new hashTable.router(this) ; returns a "router" object, which has a reference to the new hashTable. Use all methods on the returned router object.
+		return new hashtable.router(this) ; returns a "router" object, which has a reference to the new hashtable. Use all methods on the returned router object.
 	}
-	loadFromFileIfPersistent(path){
-		if (path && fileExist(path))
+	loadFromFileIfPersistent(path) {
+		if (path && fileExist(path)) {
 			this.addFromFile(path), this._loadedFromFile:=true	; The file exists, load
-		if path
+		}
+		if (path) {
 			this.path:=path, this._isPersistent:=true			; If path is specified, set _isPersistent to true, for auto saving on delete.
+		}
 		return
 	}
-	initBin(){
+	initBin() {
 		; Can be freed via freeAllBins() (you shouldn't)
 		; See c source
 		local pnewTable,pdestroy,prehash,remove,pput,pget,pfindKey,ptraverse,pfindVal,pmultPut,pmultPutConst
@@ -343,22 +350,22 @@
 			pnext			:=	[1398167381,686588744,1208060744,1384896137,3481880828,1287883084,1346096521,3944378904,4232300339,1,2382120587,2336751952,4233529607,1981304889,1133200411,143345916,2236143103,2212132032,1208089667,1529398403,3277676382,2202583089,1583032516,2428722527]
 		}
 		for j, raw in [pnewTable,pdestroy,prehash,remove,pput,pget,pfindKey,ptraverse,pfindVal,pmultPut,pmultPutConst,pmultPutNoDel,pforEachVal,pclone,paddNullDel,pcopyFromHT,pgetFromHash,pnext] ; The order matters.
-			hashTable[j]:=hashTable.rawPut(raw)
-		hashTable.init:=true
+			hashtable[j]:=hashtable.rawPut(raw)
+		hashtable.init:=true
 		return
 	}
-	initTable(clone:=0){
+	initTable(clone:=0) {
 		this.table:=this.globalAlloc(A_PtrSize)
 		NumPut(clone ? clone : this.newTable(this.size), this.table+0, 0, "Ptr")
 		return
 	}
-	initBoundFuncs(){
+	initBoundFuncs() {
 		;	pnewTable	(01)	(internal use)
 		;	pdestroy 	(02)	(use destory())
 	    ;	prehash		(03)	(use rehash())
 	    ;	remove		(04)	(use remove(key))
-	    ;	pput		(05)	(use myHashTable[key]:=value)
-	    ;	pget		(06)	(use value := myHashTable[key])
+	    ;	pput		(05)	(use myhashtable[key]:=value)
+	    ;	pget		(06)	(use value := myhashtable[key])
 	    ;	pfindKey	(07)	(use HasKey())
 		;	ptraverse	(08)	(use forEach(fn))
 		;	pfindVal	(09)	(use hasVal() or valGetKey(value))
@@ -368,33 +375,33 @@
 		;	forEachVal	(13)	(use forEachVal())
 		;	clone 		(14)	(use clone())
 		;	addNullDel	(15)	(use addFromFile())
-		;	copyFromHT	(16)	(use copyFromHashTable())
+		;	copyFromHT	(16)	(use copyFromhashtable())
 		;	getFromHash	(17)	(enum)
 		;	next 		(18)	(enum)
 		; 
-		this[2] 	:= func("dllCall").bind(hashTable[2],  "Ptr", this.table, "Ptr", hashTable.fnLib, "Cdecl")															; destroy
-		this[3] 	:= func("dllCall").bind(hashTable[3],  "Ptr", this.table, "Ptr", hashTable.fnLib, "Cdecl Ptr")														; rehash
-		this[4]		:= func("dllCall").bind(hashTable[4],  "Ptr", this.table, "Ptr", hashTable.fnLib, "wstr") 			; , key, "Cdecl")								; remove
-		this[5]		:= func("dllCall").bind(hashTable[5],  "Ptr", this.table, "Ptr", hashTable.fnLib, "wstr") 			; , key, "wstr", val, "Cdecl")					; put
-		this[6]		:= func("dllCall").bind(hashTable[6],  "Ptr", this.table, "Ptr", hashTable.fnLib, "wstr") 			; , key, "Cdecl str")							; get
+		this[2] 	:= func("dllCall").bind(hashtable[2],  "Ptr", this.table, "Ptr", hashtable.fnLib, "Cdecl")															; destroy
+		this[3] 	:= func("dllCall").bind(hashtable[3],  "Ptr", this.table, "Ptr", hashtable.fnLib, "Cdecl Ptr")														; rehash
+		this[4]		:= func("dllCall").bind(hashtable[4],  "Ptr", this.table, "Ptr", hashtable.fnLib, "wstr") 			; , key, "Cdecl")								; remove
+		this[5]		:= func("dllCall").bind(hashtable[5],  "Ptr", this.table, "Ptr", hashtable.fnLib, "wstr") 			; , key, "wstr", val, "Cdecl")					; put
+		this[6]		:= func("dllCall").bind(hashtable[6],  "Ptr", this.table, "Ptr", hashtable.fnLib, "wstr") 			; , key, "Cdecl str")							; get
 		; 7
-		this[8]		:= func("dllCall").bind(hashTable[8],  "Ptr", this.table, "Ptr", hashTable.fnLib, "ptr") 			; this.icbfn/udfn, "uint", cbid,"ptr",uParams, "Cdecl")		; traverse
-		this[9]		:= func("dllCall").bind(hashTable[9],  "Ptr", this.table, "Ptr", hashTable.fnLib, "wstr") 			; val, "Cdecl ptr")								; findVal
-		this[10]	:= func("dllCall").bind(hashTable[10], "Ptr", this.table, "Ptr", hashTable.fnLib) 					; "wstr", keys, "wstr", vals, "wstr", del,"Cdecl")	; multPut
-		this[11]	:= func("dllCall").bind(hashTable[11], "Ptr", this.table, "Ptr", hashTable.fnLib) 					; "wstr", keys, "wstr", vals, "wstr", del,"Cdecl")	; multPutConstVal
-		this[12]	:= func("dllCall").bind(hashTable[12], "Ptr", this.table, "Ptr", hashTable.fnLib) 					; "wstr", keys, "wstr", vals, "int", constVal, "Cdecl")	; multPutNoDel
-		this[13]	:= func("dllCall").bind(hashTable[13], "Ptr", this.table, "Ptr", hashTable.fnLib, "wstr") 			; val, "ptr", this.icbfn/udfn, "uint", cbid,"ptr",uParams, "Cdecl")		; forEachVal
-		this[14] 	:= func("dllCall").bind(hashTable[14], "Ptr", this.table, "Ptr", hashTable.fnLib, "Cdecl Ptr")														; clone
-		this[15] 	:= func("dllCall").bind(hashTable[15], "Ptr", this.table, "Ptr", hashTable.fnLib, "ptr")			; keys, "ptr", vals, "uint", nKeys, "Cdecl")	; addNullDel
+		this[8]		:= func("dllCall").bind(hashtable[8],  "Ptr", this.table, "Ptr", hashtable.fnLib, "ptr") 			; this.icbfn/udfn, "uint", cbid,"ptr",uParams, "Cdecl")		; traverse
+		this[9]		:= func("dllCall").bind(hashtable[9],  "Ptr", this.table, "Ptr", hashtable.fnLib, "wstr") 			; val, "Cdecl ptr")								; findVal
+		this[10]	:= func("dllCall").bind(hashtable[10], "Ptr", this.table, "Ptr", hashtable.fnLib) 					; "wstr", keys, "wstr", vals, "wstr", del,"Cdecl")	; multPut
+		this[11]	:= func("dllCall").bind(hashtable[11], "Ptr", this.table, "Ptr", hashtable.fnLib) 					; "wstr", keys, "wstr", vals, "wstr", del,"Cdecl")	; multPutConstVal
+		this[12]	:= func("dllCall").bind(hashtable[12], "Ptr", this.table, "Ptr", hashtable.fnLib) 					; "wstr", keys, "wstr", vals, "int", constVal, "Cdecl")	; multPutNoDel
+		this[13]	:= func("dllCall").bind(hashtable[13], "Ptr", this.table, "Ptr", hashtable.fnLib, "wstr") 			; val, "ptr", this.icbfn/udfn, "uint", cbid,"ptr",uParams, "Cdecl")		; forEachVal
+		this[14] 	:= func("dllCall").bind(hashtable[14], "Ptr", this.table, "Ptr", hashtable.fnLib, "Cdecl Ptr")														; clone
+		this[15] 	:= func("dllCall").bind(hashtable[15], "Ptr", this.table, "Ptr", hashtable.fnLib, "ptr")			; keys, "ptr", vals, "uint", nKeys, "Cdecl")	; addNullDel
 		; 16
 		; 17
-		this[18]	:= func("dllCall").bind(hashTable[18], "ptr")
+		this[18]	:= func("dllCall").bind(hashtable[18], "ptr")
 		
 		return
 	}
-	newTable(sz){ ; Called by initTable()
+	newTable(sz) { ; Called by initTable()
 		static pmalloc:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", DllCall("Kernel32.dll\GetModuleHandle", "Str", "MSVCRT.dll", "Ptr"), "AStr", "malloc", "Ptr")
-		return DllCall(hashTable[1], "Uint", sz, "Ptr", pmalloc, "Ptr", hashTable.tableSizes, "double", this.maxLoad, "Uint", this.nextSize, "Cdecl ptr")
+		return DllCall(hashtable[1], "Uint", sz, "Ptr", pmalloc, "Ptr", hashtable.tableSizes, "double", this.maxLoad, "Uint", this.nextSize, "Cdecl ptr")
 	}
 		
 	; Growing list of array sizes
@@ -432,16 +439,17 @@
 						,1073741789
 						,2147483629
 						,4294967291]
-	maketableSizesArray(){
-		static init := hashTable.maketableSizesArray()
+	maketableSizesArray() {
+		static init := hashtable.maketableSizesArray()
 		local tableSizes, k, sz
-		tableSizes := hashTable.globalAlloc(this.arraySizes.length()*4)
-		for k, sz in hashTable.arraySizes
+		tableSizes := hashtable.globalAlloc(this.arraySizes.length()*4)
+		for k, sz in hashtable.arraySizes {
 			NumPut(sz, tableSizes+0,(k-1)*4, "int")
-		hashTable.tableSizes:=tableSizes
+		}
+		hashtable.tableSizes:=tableSizes
 		return
 	}
-	makeFnLib(){
+	makeFnLib() {
 		; See hash.h
 		/*
 		typedef struct functionLib {
@@ -449,27 +457,27 @@
 			_free					pfree;
 			findKey					pfindKey;
 			_rehash					prehash;
-			_newHashTable			pnewHashTable;
+			_newhashtable			pnewhashtable;
 			//mb						pmb;	// db
 		} fnLib, *pfnLib;
 		*/
 		
-		local fnLib := hashTable.globalAlloc(5*A_PtrSize) ; Set to 6*A_PtrSize when using db.  Can be freed via freeFnLib() (you shouldn't)
+		local fnLib := hashtable.globalAlloc(5*A_PtrSize) ; Set to 6*A_PtrSize when using db.  Can be freed via freeFnLib() (you shouldn't)
 		local pmalloc:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", DllCall("Kernel32.dll\GetModuleHandle", "Str", "MSVCRT.dll", "Ptr"), "AStr", "malloc", "Ptr")
 		local pfree:=DllCall("Kernel32.dll\GetProcAddress", "Ptr", DllCall("Kernel32.dll\GetModuleHandle", "Str", "MSVCRT.dll", "Ptr"), "AStr", "free", "Ptr")
 		NumPut(pmalloc,					fnLib+0, A_PtrSize*0, "Ptr")
 		NumPut(pfree,					fnLib+0, A_PtrSize*1, "Ptr")
-		NumPut(hashTable[7],			fnLib+0, A_PtrSize*2, "Ptr")
-		NumPut(hashTable[3],			fnLib+0, A_PtrSize*3, "Ptr")
-		NumPut(hashTable[1], 			fnLib+0, A_PtrSize*4, "Ptr")
+		NumPut(hashtable[7],			fnLib+0, A_PtrSize*2, "Ptr")
+		NumPut(hashtable[3],			fnLib+0, A_PtrSize*3, "Ptr")
+		NumPut(hashtable[1], 			fnLib+0, A_PtrSize*4, "Ptr")
 		;NumPut(registercallback("mb","Cdecl"), 	fnLib+0, A_PtrSize*5, "Ptr") ; db
-		hashTable.fnLib:=fnLib
+		hashtable.fnLib:=fnLib
 		return
 	}
-	initSize(target:=0){
+	initSize(target:=0) {
 		; Picks the closest available size greater or equal to target.
 		local k, sz
-		for k, sz in hashTable.arraySizes {
+		for k, sz in hashtable.arraySizes {
 			if (sz >= target) {
 				this.size:=sz
 				this.nextSize:=k
@@ -478,10 +486,10 @@
 		}		
 		; this should be rare. Allocating max size might not even succeed. Not tested.
 		; Indicies in c source are unsigned int, hence max index is 2**32 (4294967296). 
-		throw Exception("The requested size (" target ") is to large. Maximum size is: " hashTable.arraySizes[hashTable.arraySizes.length()] ".",-1)
+		throw Exception("The requested size (" target ") is to large. Maximum size is: " hashtable.arraySizes[hashtable.arraySizes.length()] ".",-1)
 		return
 	}
-	rawPut(raw){	; Called by initBin, for writing binary code to memory.
+	rawPut(raw) {	; Called by initBin, for writing binary code to memory.
 		; Url:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366887(v=vs.85).aspx 	(VirtualAlloc function)
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366786(v=vs.85).aspx 	(Memory Protection Constants)
@@ -489,41 +497,45 @@
 		static flProtect:=0x40, flAllocationType:=0x1000 ; PAGE_EXECUTE_READWRITE ; MEM_COMMIT	
 		
 		bin:=DllCall("Kernel32.dll\VirtualAlloc", "Uptr",0, "Ptr", raw.length()*4, "Uint", flAllocationType, "Uint", flProtect, "Ptr")
-		for k, i in raw
+		for k, i in raw {
 			NumPut(i,bin+(k-1)*4,"Int")
+		}
 		return bin
 	}
 	; For forEach/Val
 	calloutFunctions:=[]
-	traversecalloutRouter(val,ind,cbid,hash,uParams){
+	traversecalloutRouter(val,ind,cbid,hash,uParams) {
 		; Note: this = key. the function is only called via registercallback address. see icbfn.
 		; typedef int __cdecl (*calloutFn)(unsigned short*,unsigned short*,unsigned int,unsigned int,unsigned int,void*);
 		; traversecalloutRouter(key,val,ind,cbid,hash,uParams)
 		return object(A_EventInfo).calloutFunctions[cbid].call(StrGet(this,"utf-16"), StrGet(val,"utf-16"), ind, hash, uParams)
 	}
-	setUpcalloutFunctions(udfn,byref cbfn, byref cbid){ ; Used in forEach/Val
+	setUpcalloutFunctions(udfn,byref cbfn, byref cbid) { ; Used in forEach/Val
 		if udfn is Integer
+		{
 			cbfn:=udfn
-		else
+		} else {
 			cbfn:=this.icbfn
-		if isFunc(udfn) && !isObject(udfn)
+		}
+		if (isFunc(udfn) && !isObject(udfn)) {
 			udfn:=func(udfn)
+		}
 		cbid:=this.calloutFunctions.push(udfn)
 		return 
 	}
 	; Memory functions
-	freeAllBins(){
+	freeAllBins() {
 		; Probably never wanted.
 		loop 18
-			hashTable.globalFree(hashTable[A_Index])
+			hashtable.globalFree(hashtable[A_Index])
 		return
 	}
-	freeFnLib(){
+	freeFnLib() {
 		; Probably never wanted.
-		this.globalFree(hashTable.fnLib)
+		this.globalFree(hashtable.fnLib)
 		return
 	}
-	globalAlloc(dwBytes){
+	globalAlloc(dwBytes) {
 		; URL:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366574(v=vs.85).aspx (GlobalAlloc function)
 		;static GMEM_ZEROINIT:=0x0040	; Zero fill memory
@@ -533,25 +545,25 @@
 			throw exception("GlobalAlloc failed for dwBytes: " dwBytes, -2)
 		return hMem
 	}
-	globalFree(hMem){
+	globalFree(hMem) {
 		; URL:
 		;	- https://msdn.microsoft.com/en-us/library/windows/desktop/aa366579(v=vs.85).aspx (GlobalFree function)
 		local h
-		if h:=DllCall("Kernel32.dll\GlobalFree", "Ptr", hMem, "Ptr")
+		if h := DllCall("Kernel32.dll\GlobalFree", "Ptr", hMem, "Ptr")
 			throw exception("GlobalFree failed at hMem: " hMem, -2)
 		return h
 	}
-	free(buf){
+	free(buf) {
 		return DllCall("MSVCRT.dll\free", "Ptr", buf, "Cdecl")
 	}
 	;; Destructor
-	wasFreed:=false
-	destroy(){ ; This is automatically called when the last reference to the table is released, eg,  myHashTable:=""
+	wasFreed := false
+	destroy() { ; This is automatically called when the last reference to the table is released, eg,  myhashtable:=""
 		if !this.wasFreed && this._isPersistent
 			this.toFile(this.path)
 		if this.wasFreed
 			return
-		this.wasFreed:=true
+		this.wasFreed := true
 		this[2].call()					; pdestroy
 		this.globalFree(this.table)
 		this.globalFree(this.icbfn)
@@ -559,7 +571,7 @@
 	; Internal tree/print methods.
 	; Not for v1:
 	/*
-	buildTree(tv,parents,key,val,i,h,uParams){
+	buildTree(tv,parents,key,val,i,h,uParams) {
 		local id
 		if !parents.haskey(h) {
 			id:=tv.add(h)
@@ -570,12 +582,12 @@
 		return 1
 	}
 	*/
-	checkIfNeedRehash(n){
+	checkIfNeedRehash(n) {
 		; Make one rehash if it will be needed, to avoid multiple rehashes.
 		if this.count()+n > this.getMaxload() * this.length()
 			this.rehash((this.count()+n) / this.getMaxload())
 	}
-	_toString(del1,del2,what,toBuf:=false){
+	_toString(del1,del2,what,toBuf:=false) {
 		; This is also for writing to buffer, 
 		/*
 		typedef struct toStringParams {
@@ -596,7 +608,7 @@
 		
 		static bin 
 		local dellen1, dellen2
-		if toBuf {						; Use '\0' as delimiter for buffer write
+		if (toBuf) {						; Use '\0' as delimiter for buffer write
 			varSetCapacity(del1,2,0)
 			varSetCapacity(del2,2,0)
 			dellen1 := what == 1 ? 1 : 0
@@ -617,7 +629,7 @@
 		numput(dellen1,			uParams,	A_PtrSize*5+8, "uint")		; dellen1
 		numput(dellen2,			uParams,	A_PtrSize*5+12,"uint")		; dellen2
 		numput(what,			uParams,	A_PtrSize*5+16, "int")		; what
-		if !bin	; note, using "this" here because needs to be able to access rawPut if hashTable has been deleted, typically after exitApp()
+		if !bin	; note, using "this" here because needs to be able to access rawPut if hashtable has been deleted, typically after exitApp()
 			bin := this.rawPut(A_PtrSize == 4 	? [3526448981,3968029526,611617580,612141908,608996164,608602944,2298607747,252978244,36750,2311074048,666668534,0,747488137,21007616,1199342438,4034199806,405040265,2333625995,3355515974,18892291,1003487704,2198803526,132,337935491,252087041,44942,609520384,1208257816,69500041,2300839049,4278723668,1577259094,541494040,1586085889,608471320,138840840,69485705,76351115,604277080,2333103871,1174478918,112664,3296919552,1600019244,3263808349,1711358605,4265704579,2213770496,18097276,4284187919,1153957887,6180,3677421568,4294929385,649367039,0,3238005901,1418265312,1317608484,608471316,2298907396,1459561476,1958774028,609127288,1418397321,1284054052,2088965156,2332103716,2400131150,4294967121,2299669645,2333353044,2369791060,1820936196,1418266660,76088356,274136868,2333886091,51651668,3221297238,2300073609,2332566596,1149830214,109773860,2303722637,1459561476,474909456,52709003,4169341006,407800065,4282156047,109838335,4294898921,3921687039,4294967086,2425393296] 
 												: [1465209921,2202555222,2336760044,829957236,3431549439,2346027336,4186126414,829718017,2298670043,2379778515,2204500307,17788,1452011893,809929516,1174654977,30933300,675691512,4186139251,109791233,8949263,2370043904,2370312964,2303217676,542572522,53757579,2336762974,2370048086,2336751620,744392966,1477217608,2334152447,1174484038,112684,2202533888,1583030468,1547787615,2312604099,22515192,1015234918,4050976836,251787651,4294932101,3957010943,2035589,1207964813,1451822731,2232716584,0,1209554687,1484046469,1211649675,1451951753,33129260,4286091023,2370109439,2370322180,2303479820,542572514,53495435,2336763006,2370046038,2336751620,746490118,2014088520,2334152447,1183526998,743834424,2298607747,2215586902,4294967150,3909520200,4294967090,1609154609,2432696319,2425393296,2425393296])
 			; bin is toString.c
@@ -625,27 +637,29 @@
 		
 		local buf:=numget(&uParams,"ptr")
 		local o:=numget(&uParams,A_PtrSize*5+4,"uint") ; the offset
-		if (r && toBuf)									; Caller frees buf.
+		if (r && toBuf)	{								; Caller frees buf.
 			return {buf:buf, bytes:o*2}	; the offset is at the end of the buffer, the buffer is of type short, hence multiply by 2 to get bytes. Now keeps the trailing '\0', it is probably safest because addNullDel searches for '\0' which is not guaranteed to exist at the end of the buffer unless put there.
-		
+		}
 		local str	; return 
-		if (r && o)
+		if (r && o) {
 			str := strGet(buf,o - (what == 1 ? dellen1 : dellen2))	; Removes the trailing delimiter
-		if buf
+		}
+		if (buf) {
 			this.free(buf)
+		}
 		return str
 	}
-	_newEnum(){
-		return new hashTable.enum(this)
+	_newEnum() {
+		return new hashtable.enum(this)
 	}	
 	class enum {
 		; Making this ugly improves performance. (a lot)
-		__new(r){											
+		__new(r) {											
 			this[1]:=r		; reference 					
 			this[2]:=1		; get n:th node in bucket hash 
 			this[3]:=0		; "bucket"						
 		}
-		next(byref k, byref v:=""){
+		next(byref k, byref v:="") {
 			static hash, n
 			static dummy 	:= varSetCapacity(hash, 4) + varSetCapacity(n, 4)
 			static phash	:= &hash
@@ -654,18 +668,18 @@
 			static ps2		:= a_ptrsize*2
 			static ps2_8	:= ps2+8
 			local node
-			return (node := dllcall(hashTable[18]	
-									, "ptr", this[1].table									 			; tableData** table
-									, "ptr", numput(this[3], hash, "uint")					 			; uint* hash		note: numput returns the "wrong" address, compiled code does hash-=1 (uint)
-									, "ptr", numput(this[2], n, "uint")						 			; uint* n			note: as above for n-=1
-									, "ptr", hashTable[17] 									 			; pgetFromHash
-									, "cdecl ptr"))											 			; if node!=0, return true and set key and val
-									? (k			  := strget(numget(node+ps, "ptr"),"UTF-16")		; set key
-									 , (isbyref(v)? v := strget(numget(node+ps2, "ptr"),"UTF-16"):"") 	; set val
-									 , this[3]		  := numget(phash+0, "uint")			 			; update this.hash (this[3])
-									 , this[2]		  := numget(pn+0, "uint")				 			; update this.n (this[2])
-									 , 1)													 			; return true
-									:  0 													 			; else return false
+			return (node := dllcall(hashtable[18]	
+				, "ptr", this[1].table									 			; tableData** table
+				, "ptr", numput(this[3], hash, "uint")					 			; uint* hash		note: numput returns the "wrong" address, compiled code does hash-=1 (uint)
+				, "ptr", numput(this[2], n, "uint")						 			; uint* n			note: as above for n-=1
+				, "ptr", hashtable[17] 									 			; pgetFromHash
+				, "cdecl ptr"))											 			; if node!=0, return true and set key and val
+				? (k			  := strget(numget(node+ps, "ptr"),"UTF-16")		; set key
+					, (isbyref(v)? v := strget(numget(node+ps2, "ptr"),"UTF-16"):"") 	; set val
+					, this[3]		  := numget(phash+0, "uint")			 			; update this.hash (this[3])
+					, this[2]		  := numget(pn+0, "uint")				 			; update this.n (this[2])
+					, 1)													 			; return true
+				:  0 													 			; else return false
 		}
 	}
 }
